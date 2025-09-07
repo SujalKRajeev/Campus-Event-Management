@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Calendar, Users, TrendingUp, Clock } from "lucide-react";
 import { format } from "date-fns";
+import { useToast } from "@/hooks/use-toast";
 
 interface UserProfile {
   id: string;
@@ -33,6 +34,7 @@ interface EventsOverviewProps {
 }
 
 export const EventsOverview = ({ profile }: EventsOverviewProps) => {
+  const { toast } = useToast();
   const [events, setEvents] = useState<Event[]>([]);
   const [stats, setStats] = useState({
     totalEvents: 0,
@@ -113,6 +115,34 @@ export const EventsOverview = ({ profile }: EventsOverviewProps) => {
       console.error("Error fetching stats:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRegister = async (eventId: string) => {
+    try {
+      const { error } = await supabase
+        .from('registrations')
+        .insert({
+          event_id: eventId,
+          student_id: profile.id,
+          registration_status: 'confirmed'
+        });
+
+      if (error) throw error;
+
+      toast({
+        title: "Registration Successful",
+        description: "You have successfully registered for the event.",
+      });
+
+      // Refresh events to update registration count
+      fetchEvents();
+    } catch (error: any) {
+      toast({
+        title: "Registration Failed",
+        description: error.message || "Failed to register for the event.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -244,7 +274,11 @@ export const EventsOverview = ({ profile }: EventsOverviewProps) => {
                           View Details
                         </Button>
                         {profile.role === 'student' && (
-                          <Button size="sm" variant="outline">
+                          <Button 
+                            size="sm" 
+                            variant="outline"
+                            onClick={() => handleRegister(event.id)}
+                          >
                             Register
                           </Button>
                         )}
